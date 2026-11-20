@@ -1,3 +1,3 @@
 # Cloud-Server-Network-Analysis-Project
 
-### Project by Mason Lucier, Noah Nguyen, 
+### Project by Mason Lucier, Noah Nguyen, Richard Toms
