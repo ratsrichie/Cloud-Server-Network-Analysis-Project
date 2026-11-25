@@ -151,3 +151,23 @@ def create_user(username, password):
     if username in users:
         raise ValueError(f"User '{username}' already exists.")
 
+    salt = secrets.token_bytes(16)
+    verifier = hashlib.pbkdf2_hmac(
+        "sha256", password.encode("utf-8"), salt, PBKDF2_ITERATIONS
+    )
+
+    users[username] = {
+        "salt": base64.b64encode(salt).decode("ascii"),
+        "verifier": base64.b64encode(verifier).decode("ascii"),
+        "iterations": PBKDF2_ITERATIONS
+    }
+
+    temporary_file = USERS_FILE.with_suffix(".tmp")
+    temporary_file.write_text(json.dumps(users, indent=2), encoding="utf-8")
+    try:
+        os.chmod(temporary_file, 0o600)
+    except OSError:
+        pass
+    temporary_file.replace(USERS_FILE)
+    print(f"Created account for '{username}'.")
+
