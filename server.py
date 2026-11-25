@@ -171,3 +171,78 @@ def create_user(username, password):
     temporary_file.replace(USERS_FILE)
     print(f"Created account for '{username}'.")
 
+
+def record_metric(operation, filename="", size_bytes=0,
+                  transfer_seconds=0.0, response_seconds=0.0):
+    new_file = not METRICS_FILE.exists()
+    throughput = (
+        size_bytes / (1024 * 1024) / transfer_seconds
+        if transfer_seconds > 0 and size_bytes > 0 else 0.0
+    )
+
+    with metrics_lock, METRICS_FILE.open(
+        "a", newline="", encoding="utf-8"
+    ) as file:
+        writer = csv.writer(file)
+        if new_file:
+            writer.writerow([
+                "timestamp", "operation", "filename", "size_bytes",
+                "transfer_seconds", "throughput_MBps", "response_seconds"
+            ])
+        writer.writerow([
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            operation,
+            filename,
+            size_bytes,
+            round(transfer_seconds, 6),
+            round(throughput, 6),
+            round(response_seconds, 6)
+        ])
+
+
+class ClientHandler(socketserver.BaseRequestHandler):
+    """One handler instance is created for each connected client thread."""
+
+    def authenticate(self):
+        users = load_users()
+        send_json(self.request, {"status": "AUTH_REQUIRED"})
+
+        auth_request = recv_json(self.request)
+        username = auth_request.get("username", "")
+        user = users.get(username)
+
+        if user:
+            salt = base64.b64decode(user["salt"])
+            verifier = base64.b64decode(user["verifier"])
+            iterations = int(user.get("iterations", PBKDF2_ITERATIONS))
+        else:
+            salt = secrets.token_bytes(16)
+            verifier = secrets.token_bytes(32)
+            iterations = PBKDF2_ITERATIONS
+
+        nonce = secrets.token_bytes(32)
+        send_json(self.request, {
+            "status": "CHALLENGE",
+            "salt": base64.b64encode(salt).decode("ascii"),
+            "iterations": iterations,
+            "nonce": base64.b64encode(nonce).decode("ascii")
+        })
+
+        proof_request = recv_json(self.request)
+        supplied_proof = proof_request.get("proof", "")
+        expected_proof = hmac.new(
+            verifier, nonce, hashlib.sha256
+        ).hexdigest()
+
+        if not user or not hmac.compare_digest(supplied_proof, expected_proof):
+            send_json(self.request, {
+                "status": "ERROR",
+                "message": "Authentication failed."
+            })
+            return False
+
+        send_json(self.request, {
+            "status": "OK",
+            "message": "Authentication successful."
+        })
+        return True
