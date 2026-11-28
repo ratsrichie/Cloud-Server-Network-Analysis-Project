@@ -7,7 +7,6 @@
 - `client.py`: interactive client for connecting, uploading, downloading, listing, deleting, and managing subfolders.
 - `analysis.py`: summarizes transfer metrics from the server CSV log.
 - `storage/`: server-side file storage.
-- `users.json`: generated credential verifier database (do not commit this file).
 
 ## Requirements
 - Python 3.9 or newer
