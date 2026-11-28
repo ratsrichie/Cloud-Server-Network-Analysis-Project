@@ -69,6 +69,5 @@ The server writes `network_metrics.csv` with operation, filename, bytes transfer
 - Authentication uses a random challenge and HMAC proof; the password itself is not sent over the socket.
 - This baseline does not encrypt file contents or command traffic. For use over an untrusted network, deploy the connection through TLS (for example, configure an SSL/TLS wrapper with a trusted certificate) or a protected VPN.
 - Do not commit `users.json`, passwords, private keys, or certificates to GitHub. Add `users.json`, `network_metrics.csv`, and temporary files to `.gitignore`.
-- Use only test files and accounts approved for your class project.
 - The assignment's large-file size targets should be tested with generated test files. Avoid committing multi-gigabyte test files to Git.
 
